@@ -1,0 +1,107 @@
+---
+title: "Mapping Crashes"
+author: "Daniel Riggins, MD"
+date: "11/24/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(dplyr)
+library(leaflet)
+library(leaflet.extras)
+library(RColorBrewer)
+```
+
+This analysis fulfills the first goal of the [IndyCrash project](https://osf.io/hr7kz/?view_only=411ac3d63b2340ae9f0e123727817396). Follow [this link](https://osf.io/hr7kz/wiki/home/?view_only=411ac3d63b2340ae9f0e123727817396) to learn more.
+
+### By Mode of Activity
+
+Because I am interested in supporting [active transportation](https://www.transportation.gov/mission/health/active-transportation) I have constrained the dataset to only map crashes involving pedestrians or cyclists (sorry, I like e-scooters, but they don't count). Each sub-category of active transportation is plotted on the map below. Hover over the icon on the top right to toggle each category on and off.
+
+```{r echo=FALSE}
+#Load crash data for the Indy metro area
+allIndyCrashes <- read.csv("pastedARIES.csv") %>%
+  filter(COUNTYDESCR %in% c("Marion", "Boone", "Hamilton", "Madison", "Hancock", "Shelby", "Johnson", "Morgan", "Hendricks") &
+           LATDECIMALNMB != 0 &
+           LONGDECIMALNMB != 0)
+
+#Construct base map
+m <- leaflet(allIndyCrashes, options = leafletOptions(minZoom = 8)) %>%
+  #Load map tiles from CartoDB
+  addProviderTiles("CartoDB") %>% 
+  #Set focal point of the map
+  setView(lng = -86.158, lat = 39.768, zoom =9) %>%
+  #Set bounds of the map
+  setMaxBounds(lng1 = -86.158 + 0.7,
+               lat1 = 39.768 + 0.7,
+               lng2 = -86.158 - 0.7,
+               lat2 = 39.768 - 0.7) %>%
+  #Add toggle to full screen
+  addFullscreenControl()
+
+#Set color palette for mode of travel
+palMode <- colorFactor(palette = c("blue","red"),
+                   levels = c("Pedestrian", "Pedal Cyclist"))
+
+#Define map for plotting mode of travel
+mMode <- m %>%
+  #Add markers
+  addCircles(group = ~PERSONTYPEDESCR,
+             lng = ~LONGDECIMALNMB,
+             lat = ~LATDECIMALNMB,
+             radius = 25,
+             stroke = FALSE,
+             opacity = 0.3,
+             color = ~palMode(PERSONTYPEDESCR),
+             popup = ~paste0("Index Number: ",
+                             as.character(INDEXING_NUMBER))) %>%
+  #Add legend
+  addLegend(title = "Mode of Activity",
+            values = ~PERSONTYPEDESCR,
+            pal = palMode,
+            position = "bottomleft",) %>%
+  #Add toggle for different groups
+  addLayersControl(overlayGroups = c("Pedal Cyclist", "Pedestrian"))
+
+mMode
+```
+
+### By Year
+
+In order to evaluate the effects of preventative interventions, it is important to see how crash distributions are changing over time. Similar to above, hover over the upper-right icon to toggle the plots of each year on and off.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+#Set color palette for year
+palYear <- colorFactor("Greens",allIndyCrashes$COLLISION_YEAR)
+
+#Define map for plotting crashes by year
+mYear <- m %>% addCircles(lng = ~LONGDECIMALNMB,
+                 lat = ~LATDECIMALNMB,
+                 radius = 25,
+                 weight = 2,
+                 fillOpacity = 0.7,
+                 color = ~palYear(COLLISION_YEAR),
+                 group = ~as.character(COLLISION_YEAR),
+                 popup = ~paste0("Index Number: ",
+                                 as.character(INDEXING_NUMBER)))  %>%
+  #Add legend
+  addLegend(title = "Year",
+            values = ~COLLISION_YEAR,
+            pal = palYear,
+            position = "bottomleft") %>%
+  #Add toggle for different groups
+  addLayersControl(overlayGroups = c(as.character(2007:2019)))
+
+#Generate map plotting crashes by year
+mYear
+```
+
+Although these maps allow us to visualize crash sites with highly granular detail, it's admittedly difficult to see the big picture. That's why my next analysis will focus on identifying hot spots around the metro area.
+
+### Sidenote
+
+If you want to see the code for generating these maps, please visit my github repo and check out the RMarkdown file called "plotting_crashes.Rmd".
+
