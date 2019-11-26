@@ -1,0 +1,28 @@
+INDIVIDUAL_MR_RECORD == UNIT_VEHICLE_NUMBER: ID for each collision (Unique)
+    
+    LATDECIMALNMB: Latitude of collision
+    LONGDECIMALNMB: Longitude of collision
+    UNIQUELOCATIONID: Description of location of collision
+    
+    COLLISION_YEAR: Year of collision
+    COLLDTE: Date of collision
+    
+    SPEEDLIMITTXT: Speed limit of road
+    TRAFFICCNTRLDESCR: Means of controlling traffic at site of collision
+    TRAFFICCNTLOPIND: Whether traffic control was working
+    RUMBLESTRIPIND: Whether rumble strips were present
+    SURFACETYPEDESCR: Type of surface
+    ROADTYPEDESCR: Type of road
+    SCHOOLZONEIND: Whether this happened in a school zone
+    
+    MANNERCOLLDESCR: Description of action and direction for each collision
+    COLLEVENTDESCR: Target of each collision
+    
+    INJUREDNMB: Number of people injured per each collision
+    DEADNMB: Number of people killed per each collision
+    
+    UNITNMB: ID for each vehicle per each collision
+        OCCUPSNMB: Number of people per each vehicle
+        PERSONNMB: ID for each person in a collision->vehicle
+            INDEXING_NUMBER: INDIVIDUAL_MR_RECORD + PERSONNMB (Unique)               
+                PERSONTYPEDESCR: Role of this person in the collision
