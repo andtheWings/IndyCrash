@@ -12,6 +12,7 @@ library(dplyr)
 library(leaflet)
 library(leaflet.extras)
 library(RColorBrewer)
+library(htmltools)
 ```
 
 This analysis fulfills the first goal of the [IndyCrash project](https://osf.io/hr7kz/?view_only=411ac3d63b2340ae9f0e123727817396). Follow [this link](https://osf.io/hr7kz/wiki/home/?view_only=411ac3d63b2340ae9f0e123727817396) to learn more.
@@ -21,14 +22,19 @@ This analysis fulfills the first goal of the [IndyCrash project](https://osf.io/
 Because I am interested in supporting [active transportation](https://www.transportation.gov/mission/health/active-transportation) I have constrained the dataset to only map crashes involving pedestrians or cyclists (sorry, I like e-scooters, but they don't count). Each sub-category of active transportation is plotted on the map below. Hover over the icon on the top right to toggle each category on and off.
 
 ```{r echo=FALSE}
+
+
 #Load crash data for the Indy metro area
-allIndyCrashes <- read.csv("pastedARIES.csv") %>%
-  filter(COUNTYDESCR %in% c("Marion", "Boone", "Hamilton", "Madison", "Hancock", "Shelby", "Johnson", "Morgan", "Hendricks") &
+activeIndyCrashes <- read.csv("activeARIES.csv") %>%
+    filter(COUNTYDESCR %in% c("Marion", "Boone", "Hamilton", "Madison", "Hancock", "Shelby", "Johnson", "Morgan", "Hendricks") &
            LATDECIMALNMB != 0 &
-           LONGDECIMALNMB != 0)
+           LONGDECIMALNMB != 0) %>%
+    #Just one observation per crash
+    group_by(INDIVIDUAL_MR_RECORD) %>%
+    top_n(n = 1, wt = index)
 
 #Construct base map
-m <- leaflet(allIndyCrashes, options = leafletOptions(minZoom = 8)) %>%
+m <- leaflet(activeIndyCrashes, options = leafletOptions(minZoom = 8)) %>%
   #Load map tiles from CartoDB
   addProviderTiles("CartoDB") %>% 
   #Set focal point of the map
@@ -43,27 +49,31 @@ m <- leaflet(allIndyCrashes, options = leafletOptions(minZoom = 8)) %>%
 
 #Set color palette for mode of travel
 palMode <- colorFactor(palette = c("blue","red"),
-                   levels = c("Pedestrian", "Pedal Cyclist"))
+                   levels = c("Pedestrian", "Bicyclist"))
 
 #Define map for plotting mode of travel
 mMode <- m %>%
   #Add markers
-  addCircles(group = ~PERSONTYPEDESCR,
+  addCircles(group = ~activityMode,
              lng = ~LONGDECIMALNMB,
              lat = ~LATDECIMALNMB,
              radius = 25,
              stroke = FALSE,
              opacity = 0.3,
-             color = ~palMode(PERSONTYPEDESCR),
-             popup = ~paste0("Index Number: ",
-                             as.character(INDEXING_NUMBER))) %>%
+             color = ~palMode(activityMode),
+             popup = ~paste0("<b>Index Number: ",as.character(index),"</b>",
+                             "<br/>Date: ",COLLDTE,
+                             "<br/>Location Description: ",UNIQUELOCATIONID,
+                             "<br/>Speed Limit: ",SPEEDLIMITTXT,
+                             "<br/>Number of people injured: ",INJUREDNMB,
+                             "<br/>Number of people killed: ",DEADNMB)) %>%
   #Add legend
   addLegend(title = "Mode of Activity",
-            values = ~PERSONTYPEDESCR,
+            values = ~activityMode,
             pal = palMode,
             position = "bottomleft",) %>%
   #Add toggle for different groups
-  addLayersControl(overlayGroups = c("Pedal Cyclist", "Pedestrian"))
+  addLayersControl(overlayGroups = c("Bicyclist", "Pedestrian"))
 
 mMode
 ```
@@ -75,7 +85,7 @@ In order to evaluate the effects of preventative interventions, it is important 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 #Set color palette for year
-palYear <- colorFactor("Greens",allIndyCrashes$COLLISION_YEAR)
+palYear <- colorFactor("Spectral",activeIndyCrashes$COLLISION_YEAR)
 
 #Define map for plotting crashes by year
 mYear <- m %>% addCircles(lng = ~LONGDECIMALNMB,
@@ -85,8 +95,13 @@ mYear <- m %>% addCircles(lng = ~LONGDECIMALNMB,
                  fillOpacity = 0.7,
                  color = ~palYear(COLLISION_YEAR),
                  group = ~as.character(COLLISION_YEAR),
-                 popup = ~paste0("Index Number: ",
-                                 as.character(INDEXING_NUMBER)))  %>%
+                 popup = ~paste0("<b>Index Number: ",as.character(index),"</b>",
+                             "<br/>Date: ",COLLDTE,
+                             "<br/>Location Description: ",UNIQUELOCATIONID,
+                             "<br/>Mode of Active Transportation: ",activityMode,
+                             "<br/>Speed Limit: ",SPEEDLIMITTXT,
+                             "<br/>Number of people injured: ",INJUREDNMB,
+                             "<br/>Number of people killed: ",DEADNMB))  %>%
   #Add legend
   addLegend(title = "Year",
             values = ~COLLISION_YEAR,
@@ -103,5 +118,5 @@ Although these maps allow us to visualize crash sites with highly granular detai
 
 ### Sidenote
 
-If you want to see the code for generating these maps, please visit my github repo and check out the RMarkdown file called "plotting_crashes.Rmd".
+If you want to see the code for generating these maps, please visit my [github repo](https://github.com/andtheWings/IndyCrash) and check out the RMarkdown file called "plotting_crashes.Rmd".
 
