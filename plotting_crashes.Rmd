@@ -1,12 +1,33 @@
 ---
-title: "Mapping Crashes"
+title: "Plotting Crashes"
 author: "Daniel Riggins, MD"
-date: "11/24/2019"
+date: "01/04/2019"
 output: html_document
 ---
 
+## Background
+
+Excerpt from the IndyCrash [project wiki](https://osf.io/hr7kz/wiki/home/):
+
+>Hi, my name's Dan, I'm a resident pediatrician in Indianapolis. Several years ago, my good friend Mike was bicycling through the streets of Philadelphia when a car T-boned him after it ran a red light. Mike shattered the tip of his right elbow and his head struck straight into the windshield. He likely would not have survived if he had not been wearing a helmet. He spent months recovering from complex orthopedic surgery with physical rehab.
+>
+>I love bicycling/walking (aka active mobility). It’s a great way to build exercise into the daily routine while reducing your carbon footprint. But Mike's experience underscores why many people don't engage in active transportation--they don't feel safe on our streets. I want that to change.
+>
+>This project's goal is to rebuild the environment of streets in Indy. We will engage community members around the city to design interventions for the highest risk regions to pedestrians/bicyclists. Then we'll use randomized controlled trials to test what helps protect people with the best efficacy and dollar efficiency.
+
+## Intro
+
+In this analysis, we will kick off the first of IndyCrash's objectives by plotting all crashes involving active mobility (walking or bicycling) on an interactive map of the Indianapolis metropolitan area. Once we have visualized crashes, we can use these maps for reference while building more sophisticated analyses. They'll help us verify that our results make sense.
+
+Let's get started by loading the needed R programming libraries.
+
+
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
 library(feather)
 library(dplyr)
 library(leaflet)
@@ -15,26 +36,21 @@ library(RColorBrewer)
 library(htmltools)
 ```
 
-This analysis fulfills the first goal of the [IndyCrash project](https://osf.io/hr7kz/?view_only=411ac3d63b2340ae9f0e123727817396). Follow [this link](https://osf.io/hr7kz/wiki/home/?view_only=411ac3d63b2340ae9f0e123727817396) to learn more.
+## Part 1: Visualizing by mode of active mobility
 
-### By Mode of Activity
+Each sub-category of active mobility is plotted on the map below. Hover over the icon on the top right above the legend to toggle each category on and off.
 
-Because I am interested in supporting [active transportation](https://www.transportation.gov/mission/health/active-transportation) I have constrained the dataset to only map crashes involving pedestrians or cyclists (sorry, I like e-scooters, but they don't count). Each sub-category of active transportation is plotted on the map below. Hover over the icon on the top right to toggle each category on and off.
+Sidenote: If you are interested in learning how the data was generated, please [reference here](https://nbviewer.jupyter.org/github/andtheWings/IndyCrash/blob/master/make_datasets.ipynb).
 
-```{r echo=FALSE}
+```{r echo=TRUE}
 
-
-#Load crash data for the Indy metro area
-activeIndyCrashes <- read_feather("activeARIES.feather") %>%
-    filter(COUNTYDESCR %in% c("Marion", "Boone", "Hamilton", "Madison", "Hancock", "Shelby", "Johnson", "Morgan", "Hendricks") &
-           LATDECIMALNMB != 0 &
-           LONGDECIMALNMB != 0) %>%
-    #Just one observation per crash
-    group_by(INDIVIDUAL_MR_RECORD) %>%
-    top_n(n = 1, wt = index)
+#Load crashes involving active mobility for the Indy metro area
+crashes <- read_feather("ariesCrashes.feather") %>%
+    filter(county %in% c("Marion", "Boone", "Hamilton", "Madison", "Hancock", "Shelby", "Johnson", "Morgan", "Hendricks") &
+             crashActive == TRUE)
 
 #Construct base map
-m <- leaflet(activeIndyCrashes, options = leafletOptions(minZoom = 8)) %>%
+m <- leaflet(crashes, options = leafletOptions(minZoom = 8)) %>%
   #Load map tiles from CartoDB
   addProviderTiles("CartoDB") %>% 
   #Set focal point of the map
@@ -48,75 +64,76 @@ m <- leaflet(activeIndyCrashes, options = leafletOptions(minZoom = 8)) %>%
   addFullscreenControl()
 
 #Set color palette for mode of travel
-palMode <- colorFactor(palette = c("blue","red"),
-                   levels = c("Pedestrian", "Bicyclist"))
+palMode <- colorFactor(palette = c("blue","red","purple"),
+                   levels = c("Pedestrian", "Bicyclist","Both"))
 
 #Define map for plotting mode of travel
 mMode <- m %>%
   #Add markers
-  addCircles(group = ~activityMode,
-             lng = ~LONGDECIMALNMB,
-             lat = ~LATDECIMALNMB,
+  addCircles(group = ~crashActiveMode,
+             lng = ~long,
+             lat = ~lat,
              radius = 25,
              stroke = FALSE,
              opacity = 0.3,
-             color = ~palMode(activityMode),
-             popup = ~paste0("<b>Index Number: ",as.character(index),"</b>",
-                             "<br/>Date: ",COLLDTE,
-                             "<br/>Location Description: ",UNIQUELOCATIONID,
-                             "<br/>Speed Limit: ",SPEEDLIMITTXT,
-                             "<br/>Number of people injured: ",INJUREDNMB,
-                             "<br/>Number of people killed: ",DEADNMB)) %>%
+             color = ~palMode(crashActiveMode),
+             popup = ~paste0("<b>Record Number: ",as.character(INDIVIDUAL_MR_RECORD),"</b>",
+                             "<br/>Date: ",date,
+                             "<br/>Location Description: ",locationID,
+                             "<br/>Speed Limit: ",speedLimit,
+                             "<br/>Child Involved: ",childInvolved,
+                             "<br/>In a school zone: ",schoolZone,
+                             "<br/>Number of people injured: ",numberInjured,
+                             "<br/>Number of people killed: ",numberDead)) %>%
   #Add legend
-  addLegend(title = "Mode of Activity",
-            values = ~activityMode,
+  addLegend(title = "Mode of Active Mobility Involved:",
+            values = ~crashActiveMode,
             pal = palMode,
-            position = "bottomleft",) %>%
+            position = "bottomleft") %>%
   #Add toggle for different groups
-  addLayersControl(overlayGroups = c("Bicyclist", "Pedestrian"))
+  addLayersControl(overlayGroups = c("Bicyclist","Both","Pedestrian"),
+                   position = "topright")
 
 mMode
 ```
 
-### By Year
+## Part 2: Visualizing by year
 
-In order to evaluate the effects of preventative interventions, it is important to see how crash distributions are changing over time. Similar to above, hover over the upper-right icon to toggle the plots of each year on and off.
+In order to evaluate the effects of preventative interventions, it is important to see how crash distributions are changing over time. Similar to above, hover over the top-right icon to toggle the plots of each year on and off.
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
+```{r echo=TRUE, message=FALSE, warning=FALSE}
 
 #Set color palette for year
-palYear <- colorFactor("Spectral",activeIndyCrashes$COLLISION_YEAR)
+palYear <- colorFactor("Spectral",crashes$year)
 
 #Define map for plotting crashes by year
-mYear <- m %>% addCircles(lng = ~LONGDECIMALNMB,
-                 lat = ~LATDECIMALNMB,
-                 radius = 25,
-                 weight = 2,
-                 fillOpacity = 0.7,
-                 color = ~palYear(COLLISION_YEAR),
-                 group = ~as.character(COLLISION_YEAR),
-                 popup = ~paste0("<b>Index Number: ",as.character(index),"</b>",
-                             "<br/>Date: ",COLLDTE,
-                             "<br/>Location Description: ",UNIQUELOCATIONID,
-                             "<br/>Mode of Active Transportation: ",activityMode,
-                             "<br/>Speed Limit: ",SPEEDLIMITTXT,
-                             "<br/>Number of people injured: ",INJUREDNMB,
-                             "<br/>Number of people killed: ",DEADNMB))  %>%
+mYear <- m %>% addCircles(lng = ~long,
+                          lat = ~lat,
+                          radius = 25,
+                          weight = 2,
+                          fillOpacity = 0.7,
+                          color = ~palYear(year),
+                          group = ~as.character(year),
+                          popup = ~paste0("<b>Record Number: ",as.character(INDIVIDUAL_MR_RECORD),"</b>",
+                                          "<br/>Date: ",date,
+                                          "<br/>Location Description: ",locationID,
+                                          "<br/>Mode of Active Mobility: ",crashActiveMode,
+                                          "<br/>Speed Limit: ",speedLimit,
+                                          "<br/>Child Involved: ",childInvolved,
+                                          "<br/>In a school zone: ",schoolZone,
+                                          "<br/>Number of people injured: ",numberInjured,
+                                          "<br/>Number of people killed: ",numberDead))  %>%
   #Add legend
   addLegend(title = "Year",
-            values = ~COLLISION_YEAR,
+            values = ~year,
             pal = palYear,
             position = "bottomleft") %>%
   #Add toggle for different groups
-  addLayersControl(overlayGroups = c(as.character(2007:2019)))
+  addLayersControl(overlayGroups = c(as.character(2007:2019)),
+                   position = "topright")
 
 #Generate map plotting crashes by year
 mYear
 ```
 
 Although these maps allow us to visualize crash sites with highly granular detail, it's admittedly difficult to see the big picture. That's why my next analysis will focus on identifying hot spots around the metro area.
-
-### Sidenote
-
-If you want to see the code for generating these maps, please visit my [github repo](https://github.com/andtheWings/IndyCrash) and check out the RMarkdown file called "plotting_crashes.Rmd".
-
