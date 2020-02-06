@@ -1,0 +1,76 @@
+---
+title: "KDE+ method for identifying hotspots of pedestrian/bicylist traffic crashes"
+author: "Daniel Riggins, MD"
+output: html_notebook
+---
+
+```{r}
+library(feather)
+library(dplyr)
+library(sf)
+
+# Load crashes in a tibble
+crashes.t <- read_feather("ariesCrashes.feather") %>%
+    # Only active crashes
+    filter(crashActive == TRUE)
+
+# Convert format to simple feature collection--the standard format for geographic analyses in R
+crashes <- st_as_sf(crashes.t, coords = c("long","lat"), crs = 4326) %>% 
+  # Transform onto a local Indiana projection
+    st_transform(crs = 7327)
+
+# Load shapefile of marion county borders as a simple feature collection
+marion <- st_read(dsn = "Marion_County_Boundary/Marion_County_Boundary.shp") %>% 
+  # Transform onto a local Indiana projection
+    st_transform(crs = 7327)
+plot(marion$geometry, reset = FALSE)
+
+# Identify which crashes took place inside of Marion County
+inMarion <- st_intersects(crashes, marion, sparse = FALSE)
+
+# Display summary of how many took place in Marion County vs not
+summary(inMarion)
+
+# Select only the crashes that took place in Marion County
+marionCrashes <- crashes %>% 
+  filter(inMarion == TRUE)
+
+# Illustrate distribution of Marion County crashes
+plot(marionCrashes$geometry, add = TRUE)
+
+marionCrashes %>% 
+  # Select a subset of variables for export   
+  select(date, childInvolved, crashActiveMode, numberInjured, numberDead, geometry) %>%
+    # Write crashes to a shapefile format for external use
+    st_write("Marion_Crashes/Marion_Crashes.shp")
+```
+
+```{r}
+# Load shapefile of Marion County street lines
+rawMarionStreets <- st_read("Street_Centerlines/Street_Centerlines.shp") 
+
+rawMarionStreets %>%
+  # Transform onto local Indiana projection
+  st_transform(crs = 7327) %>%
+  # Convert multiple line strings into a multilinestring object
+  st_combine() %>%
+  # Unsplit lines if they have arbitrary points dividing them
+  st_line_merge() %>%
+  # Convert back into a collection of linestring segments
+  st_cast("LINESTRING") %>%
+  # Write to disk
+  st_write("Marion_Streets/Marion_Streets.shp")
+```
+
+```{r}
+# Load KDE+ clustering analysis data
+clusters <- read.csv2("KDEplusClusters.csv")
+clusters
+```
+
+```{r}
+# Load Jiri's manipulation of Indy streets
+Jiri_streets <- st_read("Jiri_streets/Street_Centerlines_unsplit_lines_WM.shp")
+Jiri_streets
+```
+
