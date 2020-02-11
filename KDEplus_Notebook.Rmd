@@ -1,17 +1,21 @@
 ---
 title: "KDE+ method for identifying hotspots of pedestrian/bicylist traffic crashes"
 author: "Daniel Riggins, MD"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 ```{r}
 library(feather)
 library(dplyr)
 library(sf)
+library(ggplot2)
+library(lwgeom)
 
 # Load crashes in a tibble
 crashes.t <- read_feather("ariesCrashes.feather") %>%
-    # Only active crashes
+    # Only active transit crashes (involving walkers or bicyclists)
     filter(crashActive == TRUE)
 
 # Convert format to simple feature collection--the standard format for geographic analyses in R
@@ -38,18 +42,18 @@ marionCrashes <- crashes %>%
 # Illustrate distribution of Marion County crashes
 plot(marionCrashes$geometry, add = TRUE)
 
-marionCrashes %>% 
-  # Select a subset of variables for export   
-  select(date, childInvolved, crashActiveMode, numberInjured, numberDead, geometry) %>%
-    # Write crashes to a shapefile format for external use
-    st_write("Marion_Crashes/Marion_Crashes.shp")
+# marionCrashes %>%
+#   # Select a subset of variables for export
+#   select(date, childInvolved, crashActiveMode, numberInjured, numberDead, geometry) %>%
+#     # Write crashes to a shapefile format for external use
+#     st_write("Marion_Crashes/Marion_Crashes.shp")
 ```
 
 ```{r}
 # Load shapefile of Marion County street lines
 rawMarionStreets <- st_read("Street_Centerlines/Street_Centerlines.shp") 
 
-rawMarionStreets %>%
+MarionStreets <- rawMarionStreets %>%
   # Transform onto local Indiana projection
   st_transform(crs = 7327) %>%
   # Convert multiple line strings into a multilinestring object
@@ -57,20 +61,39 @@ rawMarionStreets %>%
   # Unsplit lines if they have arbitrary points dividing them
   st_line_merge() %>%
   # Convert back into a collection of linestring segments
-  st_cast("LINESTRING") %>%
-  # Write to disk
-  st_write("Marion_Streets/Marion_Streets.shp")
+  st_cast("LINESTRING")
+  
+# Write to disk
+# st_write(MarionStreets, "Marion_Streets/Marion_Streets.shp")
 ```
+
+Here I tried to use the KDE+ tool myself, but could not get it to parse shapefiles on my machine. They also have a toolbox that can be used in ArcGIS, but I don't have a license. Eventually, I want to be able to reproducibly perform this step myself, but for now I'm using data processed and sent back to me by the team that manages the KDE+ software project. I sent them an unmodified shapefile of Marion county streets and my processed dataset of active crashes.
 
 ```{r}
 # Load KDE+ clustering analysis data
 clusters <- read.csv2("KDEplusClusters.csv")
 clusters
-```
 
-```{r}
-# Load Jiri's manipulation of Indy streets
-Jiri_streets <- st_read("Jiri_streets/Street_Centerlines_unsplit_lines_WM.shp")
-Jiri_streets
+# Load Jiri's manipulation of Indy streets (he merged lines that were continuous with each other, but had arbitrary break points). I did a similar manipulation abpve, but ended up with a different number of line segments. 
+JiriStreets <- st_read("Jiri_streets/Street_Centerlines_unsplit_lines_WM.shp")
+JiriStreets
+
+# Building a work flow to visualize areas of clustering overlaid on the street network. Will eventually encapsulate this work flow in a looping function
+
+# Extract ID of the line from which the first cluster segment is drawn
+lineID <- clusters[1,"ID_line"]
+lineID
+
+# Extract the parent line
+myLine <- JiriStreets[lineID, "geometry"]
+
+# Segment the parent line into the clustered child line
+mySubLine <- st_linesubstring(myLine, 0.2, 0.8)
+
+# Visualize
+ggplot() +
+  geom_sf(data = myLine) +
+  geom_sf(data = mySubLine, color = "red")
+
 ```
 
