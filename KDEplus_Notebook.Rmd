@@ -210,9 +210,9 @@ It's worth considering why I bothered to do this analysis in the first place whe
 
 ## Next Steps
 
-### A different kernel
+### Cross-verify validity with another method
 
-Given the relative immaturity of the KDE+ method, I'd like to compare its results to a similar [network-based, statistically rigorous method](https://onlinelibrary.wiley.com/doi/abs/10.1111/sjos.12255). This method also uses kernel density estimation, but employs the "heat kernel" function as the "correct analogue of the Gaussian kernel [for estimating] the occupation density of Brownian motion on the network". This probably means more to spatiotemporal statisticians, but my understanding is it better accounts for how density can diffuse through nodes of a network rather than breaking each edge into a discrete target of analyis. Let me know if that's at all close lol. Anyway, I should theoretically be able to perform 100% of this [method within the R scripting environment](https://rdrr.io/cran/spatstat/man/density.lpp.html). Fingers crossed.
+To double-check my result, I'd like to compare using a similar [network-based, statistically rigorous method](https://onlinelibrary.wiley.com/doi/abs/10.1111/sjos.12255). This method also uses kernel density estimation, but employs the "heat kernel" function as the "correct analogue of the Gaussian kernel [for estimating] the occupation density of Brownian motion on the network". This probably means more to spatiotemporal statisticians, but my understanding is it accounts for how density can diffuse through nodes of a network rather than breaking each edge into a discrete target of analyis as KDE+ does. Let me know if that's at all close lol. Anyway, I should theoretically be able to perform 100% of this [method within the R scripting environment](https://rdrr.io/cran/spatstat/man/density.lpp.html). Fingers crossed.
 
 ### The built environment
 
@@ -225,3 +225,9 @@ In the future, this project will rely heavily on local residents to guide how to
 ## That's it for now
 
 Stay tuned for more work. Please reach out to me on [Twitter](https://twitter.com/DanRiggins) or [Github](https://github.com/andtheWings/IndyCrash) if you have critiques/suggestions.
+
+## Attribution and License
+
+KDE+ tool: Bíl, M., Andrášik, R., Svoboda, T., Sedoník, J. KDE+. Computer software. Vers. 2.3. Olomouc: CDV - Transport Research Centre, 2020. Web. <www.kdeplus.cz/en>.
+
+<a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc/4.0/">Creative Commons Attribution-NonCommercial 4.0 International License</a>.
