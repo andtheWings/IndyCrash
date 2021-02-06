@@ -1,15 +1,14 @@
 Package: IndyCrash
-Title: What the Package Does (One Line, Title Case)
+Title: Tools for analyzing crash data in Indianapolis, IN 
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Daniel",
+           family = "Riggins",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to
-    pick a license
+           email = "daniel.riggins@protonmail.com",
+           comment = c(ORCID = "0000-0002-6240-6212"))
+Description: This package eases the process of analyzing data on street crashes around Indianapolis, Indiana. Two main datasources include the ARIES crash repository from the State of Indiana's Management Performance Hub and geospatial objects from the OpenIndy Data Portal.
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
