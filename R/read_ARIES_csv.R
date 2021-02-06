@@ -1,3 +1,13 @@
+#' Ingest a csv file from the [ARIES crash repository](https://hub.mph.in.gov/dataset/aries-crash-data-2007-2017)
+#'
+#' @param ARIES_csv A csv file originating from the ARIES crash repository
+#'
+#' @return A tibble
+#' @export
+#'
+#' @examples
+#'
+#' read_ARIES_csv("ARIES_2017.csv")
 read_ARIES_csv <- function(ARIES_csv) {
     readr::read_csv(
         file = ARIES_csv,
